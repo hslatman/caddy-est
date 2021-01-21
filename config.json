@@ -24,7 +24,7 @@
                 "match": [
                   {
                     "path": [
-                      "/.well-known/est"
+                      "/.well-known/est/*"
                     ]
                   }
                 ],
@@ -34,7 +34,8 @@
                   }
                 ]
               }
-            ]
+            ],
+            "logs": {}
           }
         }
       },

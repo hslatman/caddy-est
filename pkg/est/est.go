@@ -17,11 +17,14 @@ package est
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/caddyserver/caddy/v2/modules/caddypki"
 	"go.uber.org/zap"
+
+	"github.com/globalsign/est"
 )
 
 func init() {
@@ -71,6 +74,24 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 
 	fmt.Println(ca)
 
+	//logger := log.New(os.Stderr, "", log.LstdFlags)
+
+	estCA := NewCA(ca)
+
+	// Create server mux.
+	r, err := est.NewRouter(&est.ServerConfig{
+		CA:             estCA,
+		Logger:         nil,             //logger,
+		AllowedHosts:   nil,             //cfg.AllowedHosts,
+		Timeout:        time.Second * 0, // time.Duration(cfg.Timeout) * time.Second,
+		RateLimit:      0,               //cfg.RateLimit,
+		CheckBasicAuth: nil,             //pwfunc,
+	})
+
+	fmt.Println(r)
+
+	h.handler = r
+
 	// logger := log.NewJSONLogger(os.Stderr)
 	// debug := level.Debug(logger)
 
@@ -91,6 +112,12 @@ func (h *Handler) processDefaults() {
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 
+	// record the response, overwrite pieces? Like a header.
+
+	h.handler.ServeHTTP(w, r)
+
+	return nil
+
 	// if strings.HasPrefix(r.URL.Path, h.PathPrefix) {
 	// 	fmt.Println("serving scep endpoint")
 
@@ -103,7 +130,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 	// 	return nil
 	// }
 
-	return next.ServeHTTP(w, r)
+	//return next.ServeHTTP(w, r)
 }
 
 // Cleanup implements caddy.CleanerUpper and closes any idle databases.

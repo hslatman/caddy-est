@@ -120,6 +120,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 	// Of course that could be done using a header directive too, but it would be nice
 	// to specify something different than the default `"GlobalSign EST Server v1.0.3`
 	// from the embedded Chi router.
+	// TODO: implement wrapper for errors written by the Chi router?
+
+	fmt.Println(fmt.Sprintf("%#+v", r))
 
 	h.handler.ServeHTTP(w, r)
 

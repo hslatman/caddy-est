@@ -1,0 +1,66 @@
+{   
+    "logging": {
+        "logs": {
+            "default": {
+                "level": "DEBUG",
+                "writer": {
+                  "output": "stderr"
+                }
+            }
+        }
+    },
+    "apps": {
+      "http": {
+        "http_port": 9080,
+        "https_port": 9443,
+        "servers": {
+          "server1": {
+            "listen": [
+              "127.0.0.1:9443"
+            ],
+            "routes": [
+              {
+                "group": "est",
+                "match": [
+                  {
+                    "path": [
+                      "/.well-known/est"
+                    ]
+                  }
+                ],
+                "handle": [
+                  {
+                    "handler": "est"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "tls": {
+        "automation": {
+          "policies": [
+            {
+              "subjects": ["localhost"],
+              "issuers": [{
+                "module": "internal"
+              }],
+              "on_demand": true
+            }
+          ]
+        }
+      },
+      "pki": {
+        "certificate_authorities": {
+          "local": {},
+          "est": {
+            "name": "EST Example",
+            "root_common_name": "EST Root Example",
+            "intermediate_common_name": "EST Intermediate Example",
+            "install_trust": false
+          }
+        }
+      }
+    }
+  }

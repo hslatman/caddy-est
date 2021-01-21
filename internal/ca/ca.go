@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package est
+package ca
 
 import (
 	"context"
@@ -27,7 +27,7 @@ type CA struct {
 	pki *caddypki.CA
 }
 
-func NewCA(pkiCA *caddypki.CA) *CA {
+func New(pkiCA *caddypki.CA) *CA {
 	return &CA{
 		pki: pkiCA,
 	}

@@ -17,6 +17,7 @@ package est
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
@@ -25,6 +26,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/globalsign/est"
+
+	"github.com/hslatman/caddy-est/internal/ca"
+	"github.com/hslatman/caddy-est/internal/logger"
 )
 
 func init() {
@@ -67,21 +71,21 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 	pkiApp := pkiModule.(*caddypki.PKI)
 	fmt.Println(pkiApp)
 	fmt.Println(fmt.Sprintf("%#+v", pkiApp.CAs))
-	ca, ok := pkiApp.CAs[h.CA]
+	pkiCA, ok := pkiApp.CAs[h.CA]
 	if !ok {
 		return fmt.Errorf("no certificate authority configured with id: %s", h.CA)
 	}
 
-	fmt.Println(ca)
+	fmt.Println(pkiCA)
 
-	//logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logger.New(os.Stderr)
 
-	estCA := NewCA(ca)
+	estCA := ca.New(pkiCA)
 
 	// Create server mux.
 	r, err := est.NewRouter(&est.ServerConfig{
 		CA:             estCA,
-		Logger:         nil,             //logger,
+		Logger:         logger,          //logger,
 		AllowedHosts:   nil,             //cfg.AllowedHosts,
 		Timeout:        time.Second * 0, // time.Duration(cfg.Timeout) * time.Second,
 		RateLimit:      0,               //cfg.RateLimit,
@@ -112,7 +116,10 @@ func (h *Handler) processDefaults() {
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 
-	// record the response, overwrite pieces? Like a header.
+	// TODO: record the response, overwrite pieces? Like a header.
+	// Of course that could be done using a header directive too, but it would be nice
+	// to specify something different than the default `"GlobalSign EST Server v1.0.3`
+	// from the embedded Chi router.
 
 	h.handler.ServeHTTP(w, r)
 

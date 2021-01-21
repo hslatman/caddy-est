@@ -105,7 +105,7 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 func (h *Handler) processDefaults() {
 
 	if h.CA == "" {
-		h.CA = "est"
+		h.CA = "local"
 	}
 
 	if h.Host == "" {

@@ -30,7 +30,9 @@
                 ],
                 "handle": [
                   {
-                    "handler": "est"
+                    "handler": "est",
+                    "ca": "est",
+                    "host": "localhost"
                   }
                 ]
               }

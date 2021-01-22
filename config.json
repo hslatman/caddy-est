@@ -61,7 +61,8 @@
               "subjects": ["estserver.local.example.com"],
               "issuers": [{
                 "module": "internal",
-                "ca": "est-example"
+                "ca": "est-example",
+                "host": "estserver.local.example.com"
               }],
               "on_demand": true
             }

@@ -45,14 +45,10 @@ const (
 type Handler struct {
 	CA   string `json:"ca,omitempty"`
 	Host string `json:"host,omitempty"`
-	//PathPrefix string `json:"path_prefix,omitempty"`
 
 	logger     *zap.Logger
 	router     http.Handler
 	bufferPool *bpool.BufferPool
-
-	// privKey *rsa.PrivateKey
-	// cert    *x509.Certificate
 }
 
 // CaddyModule returns the Caddy module information.
@@ -77,30 +73,29 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 	}
 
 	pkiApp := pkiModule.(*caddypki.PKI)
-	fmt.Println(pkiApp)
-	fmt.Println(fmt.Sprintf("%#+v", pkiApp.CAs))
+
 	pkiCA, ok := pkiApp.CAs[h.CA]
 	if !ok {
 		return fmt.Errorf("no certificate authority configured with id: %s", h.CA)
 	}
 
-	fmt.Println(pkiCA)
+	h.logger.Info(fmt.Sprintf("using ca: `%s (%s)` for issuing certificates over EST", pkiCA.Name, pkiCA.ID()))
 
 	logger := logger.New(os.Stderr)
 
-	estCA := ca.New(pkiCA)
+	estCA := ca.New(pkiCA, h.logger)
 
-	// Create server mux.
-	r, err := est.NewRouter(&est.ServerConfig{
+	estServerConfig := &est.ServerConfig{
 		CA:             estCA,
 		Logger:         logger,          //logger,
 		AllowedHosts:   nil,             //cfg.AllowedHosts,
 		Timeout:        time.Second * 0, // time.Duration(cfg.Timeout) * time.Second,
 		RateLimit:      0,               //cfg.RateLimit,
 		CheckBasicAuth: nil,             //pwfunc,
-	})
+	}
 
-	fmt.Println(r)
+	// Create a new globalsign/est router based on Chi
+	r, err := est.NewRouter(estServerConfig)
 
 	h.router = r
 

@@ -14,9 +14,9 @@
         "http_port": 9080,
         "https_port": 9443,
         "servers": {
-          "server1": {
+          "estserver": {
             "listen": [
-              "127.0.0.1:9443"
+              "estserver.local.example.com:9443"
             ],
             "routes": [
               {
@@ -31,7 +31,7 @@
                 "handle": [
                   {
                     "handler": "est",
-                    "ca": "est",
+                    "ca": "est-example",
                     "host": "localhost"
                   }
                 ]
@@ -53,7 +53,15 @@
               "subjects": ["localhost"],
               "issuers": [{
                 "module": "internal",
-                "ca": "est"
+                "ca": "local"
+              }],
+              "on_demand": true
+            },
+            {
+              "subjects": ["estserver.local.example.com"],
+              "issuers": [{
+                "module": "internal",
+                "ca": "est-example"
               }],
               "on_demand": true
             }
@@ -63,7 +71,7 @@
       "pki": {
         "certificate_authorities": {
           "local": {},
-          "est": {
+          "est-example": {
             "name": "EST Example",
             "root_common_name": "EST Root Example",
             "intermediate_common_name": "EST Intermediate Example",

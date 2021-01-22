@@ -37,6 +37,10 @@ func init() {
 	caddy.RegisterModule(Handler{})
 }
 
+const (
+	serverHeader = "Caddy EST Server v0.1.0"
+)
+
 // Handler is an EST server handler
 type Handler struct {
 	CA   string `json:"ca,omitempty"`
@@ -122,10 +126,6 @@ func (h *Handler) processDefaults() {
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 
-	// TODO: record the response, overwrite pieces? Like a header.
-	// Of course that could be done using a header directive too, but it would be nice
-	// to specify something different than the default `"GlobalSign EST Server v1.0.3`
-	// from the embedded Chi router.
 	// TODO: implement wrapper for errors written by the Chi router?
 
 	fmt.Println(fmt.Sprintf("%#+v", r))
@@ -152,6 +152,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 	if !recorder.Buffered() {
 		// NOTE: not specifically required at this time
 	}
+
+	recorder.Header().Set("server", serverHeader)
 
 	// The body was not changed; write response the easy way
 	return recorder.WriteResponse()

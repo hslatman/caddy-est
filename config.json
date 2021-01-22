@@ -32,7 +32,13 @@
                   {
                     "handler": "est",
                     "ca": "est-example",
-                    "host": "estserver.local.example.com"
+                    "allowed_hosts": [
+                      "estserver.local.example.com"
+                    ],
+                    "rate_limit": 0,
+                    "enabled_basic_auth": false,
+                    "basic_auth_username": "username",
+                    "basic_auth_password": "password"
                   }
                 ]
               }

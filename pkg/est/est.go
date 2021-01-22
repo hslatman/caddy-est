@@ -15,6 +15,8 @@
 package est
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -42,8 +44,30 @@ const (
 
 // Handler is an EST server handler
 type Handler struct {
-	CA   string `json:"ca,omitempty"`
-	Host string `json:"host,omitempty"`
+	// CA is the ID of the Caddy PKI CA to use for issuing
+	// certificates using EST
+	CA string `json:"ca,omitempty"`
+	// AllowedHosts are the allowed hosts (according to Host header)
+	// that can use the CA for issuing certificates. Defaults to
+	// an empty list, resulting in no host validation being
+	// performed.
+	AllowedHosts []string `json:"allowed_hosts,omitempty"`
+	// RateLimit is the maximum number of requests per second
+	// on handler level (so, for all clients together). Defaults
+	// to 0, meaning no limit is enforced.
+	RateLimit int `json:"rate_limit,omitempty"`
+	// EnableBasicAuth enables HTTP Basic Authentication for
+	// all EST endpoints
+	EnableBasicAuth *bool `json:"enabled_basic_auth,omitempty"`
+	// BasicAuthUsername is the username to use for HTTP Basic
+	// authentication
+	BasicAuthUsername string `json:"basic_auth_username,omitempty"`
+	// BasicAuthPassword is the password to use for HTTP Basic
+	// authentication
+	BasicAuthPassword string `json:"basic_auth_password,omitempty"`
+
+	// TODO: improve the Basic Auth configuration?
+	// TODO: think about and implement alternative methods for authentication.
 
 	logger     *zap.Logger
 	router     http.Handler
@@ -80,19 +104,21 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 
 	h.logger.Info(fmt.Sprintf("using ca: `%s (%s)` for issuing certificates over EST", pkiCA.Name, pkiCA.ID()))
 
-	logger := logger.ZapWrappingLogger{
+	estLogger := logger.ZapWrappingLogger{
 		Logger: h.logger,
 	}
 
 	estCA := ca.New(pkiCA, h.logger)
 
+	basicAuthFunc := h.createBasicAuthFunc()
+
 	estServerConfig := &est.ServerConfig{
 		CA:             estCA,
-		Logger:         logger,
-		AllowedHosts:   nil,             //cfg.AllowedHosts,
-		Timeout:        time.Second * 0, // time.Duration(cfg.Timeout) * time.Second,
-		RateLimit:      0,               //cfg.RateLimit,
-		CheckBasicAuth: nil,             //pwfunc,
+		Logger:         estLogger,
+		AllowedHosts:   h.AllowedHosts,
+		Timeout:        time.Second * 30,
+		RateLimit:      h.RateLimit,
+		CheckBasicAuth: basicAuthFunc,
 	}
 
 	// Create a new globalsign/est router based on Chi
@@ -114,10 +140,28 @@ func (h *Handler) processDefaults() {
 		h.CA = "local"
 	}
 
-	if h.Host == "" {
-		h.Host = "localhost"
+	if h.AllowedHosts == nil {
+		h.AllowedHosts = []string{"localhost"}
 	}
 
+}
+
+func (h *Handler) createBasicAuthFunc() func(ctx context.Context, r *http.Request, aps, username, password string) error {
+
+	if h.EnableBasicAuth == nil || !*h.EnableBasicAuth {
+		return nil
+	}
+
+	basicAuthFunc := func(ctx context.Context, r *http.Request, aps, username, password string) error {
+		username, password, ok := r.BasicAuth()
+		if !ok || username != h.BasicAuthUsername || password != h.BasicAuthPassword {
+			return errors.New("http basic authentication required")
+		}
+
+		return nil
+	}
+
+	return basicAuthFunc
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
@@ -135,10 +179,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 
 	h.router.ServeHTTP(recorder, r)
 
-	// TODO: handle the case that the response is empty (i.e. 404, 204, etc)?
-
 	if !recorder.Buffered() {
-		// NOTE: not specifically required at this time
+		// NOTE: not specifically required at this time, because we always buffer
 	}
 
 	// TODO: implement wrapping of errors written by the Chi router?

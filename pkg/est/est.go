@@ -25,6 +25,8 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddypki"
 	"go.uber.org/zap"
 
+	"github.com/oxtoacart/bpool"
+
 	"github.com/globalsign/est"
 
 	"github.com/hslatman/caddy-est/internal/ca"
@@ -41,8 +43,9 @@ type Handler struct {
 	Host string `json:"host,omitempty"`
 	//PathPrefix string `json:"path_prefix,omitempty"`
 
-	logger  *zap.Logger
-	handler http.Handler
+	logger     *zap.Logger
+	router     http.Handler
+	bufferPool *bpool.BufferPool
 
 	// privKey *rsa.PrivateKey
 	// cert    *x509.Certificate
@@ -56,12 +59,13 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision sets up the ACME server handler.
+// Provision sets up the EST server handler.
 func (h *Handler) Provision(ctx caddy.Context) error {
 
 	h.processDefaults()
 
 	h.logger = ctx.Logger(h)
+	h.bufferPool = bpool.NewBufferPool(64)
 
 	pkiModule, err := ctx.App("pki")
 	if err != nil {
@@ -94,11 +98,13 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 
 	fmt.Println(r)
 
-	h.handler = r
+	h.router = r
 
-	// logger := log.NewJSONLogger(os.Stderr)
-	// debug := level.Debug(logger)
+	return nil
+}
 
+// Validate sets up the EST server handler.
+func (h *Handler) Validate() error {
 	return nil
 }
 
@@ -124,36 +130,36 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 
 	fmt.Println(fmt.Sprintf("%#+v", r))
 
-	h.handler.ServeHTTP(w, r)
+	buffer := h.bufferPool.Get()
+	defer h.bufferPool.Put(buffer)
 
-	return nil
+	shouldBuffer := func(status int, header http.Header) bool {
+		// TODO: add logic for performing buffering vs. not doing it
+		// For now, we'll always buffer it
+		return true
+	}
+	recorder := caddyhttp.NewResponseRecorder(w, buffer, shouldBuffer)
 
-	// if strings.HasPrefix(r.URL.Path, h.PathPrefix) {
-	// 	fmt.Println("serving scep endpoint")
+	fmt.Println(recorder)
 
-	// 	fmt.Println(fmt.Sprintf("%#+v", r))
+	h.router.ServeHTTP(recorder, r)
 
-	// 	h.handler.ServeHTTP(w, r)
+	fmt.Println(recorder)
+	fmt.Println(fmt.Sprintf("%#+v", recorder))
 
-	// 	fmt.Println("done")
+	// TODO: handle the case that the response is empty (i.e. 404, 204, etc)?
 
-	// 	return nil
-	// }
+	if !recorder.Buffered() {
+		// NOTE: not specifically required at this time
+	}
 
-	//return next.ServeHTTP(w, r)
+	// The body was not changed; write response the easy way
+	return recorder.WriteResponse()
 }
 
 // Cleanup implements caddy.CleanerUpper and closes any idle databases.
 func (h Handler) Cleanup() error {
-	// key := ash.getDatabaseKey()
-	// deleted, err := databasePool.Delete(key)
-	// if deleted {
-	// 	ash.logger.Debug("unloading unused CA database", zap.String("db_key", key))
-	// }
-	// if err != nil {
-	// 	ash.logger.Error("closing CA database", zap.String("db_key", key), zap.Error(err))
-	// }
-	// return err
+	// TODO: do we have something to clean up?
 	return nil
 }
 
@@ -162,5 +168,6 @@ var (
 	_ caddy.Module                = (*Handler)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Handler)(nil)
 	_ caddy.Provisioner           = (*Handler)(nil)
+	_ caddy.Validator             = (*Handler)(nil)
 	_ caddy.CleanerUpper          = (*Handler)(nil)
 )

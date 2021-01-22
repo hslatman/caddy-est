@@ -44,7 +44,7 @@ Below is an excerpt of the configuration for (just) the EST module:
                 "estserver.local.example.com"
             ],
             "rate_limit": 0,
-            "enabled_basic_auth": false,
+            "enable_basic_auth": false,
             "basic_auth_username": "username",
             "basic_auth_password": "password"
         }

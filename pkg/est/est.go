@@ -58,7 +58,7 @@ type Handler struct {
 	RateLimit int `json:"rate_limit,omitempty"`
 	// EnableBasicAuth enables HTTP Basic Authentication for
 	// all EST endpoints
-	EnableBasicAuth *bool `json:"enabled_basic_auth,omitempty"`
+	EnableBasicAuth *bool `json:"enable_basic_auth,omitempty"`
 	// BasicAuthUsername is the username to use for HTTP Basic
 	// authentication
 	BasicAuthUsername string `json:"basic_auth_username,omitempty"`

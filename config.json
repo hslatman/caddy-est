@@ -32,7 +32,7 @@
                   {
                     "handler": "est",
                     "ca": "est-example",
-                    "host": "localhost"
+                    "host": "estserver.local.example.com"
                   }
                 ]
               }
@@ -61,8 +61,7 @@
               "subjects": ["estserver.local.example.com"],
               "issuers": [{
                 "module": "internal",
-                "ca": "est-example",
-                "host": "estserver.local.example.com"
+                "ca": "est-example"
               }],
               "on_demand": true
             }

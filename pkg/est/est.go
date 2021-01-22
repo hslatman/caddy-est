@@ -17,7 +17,6 @@ package est
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
@@ -81,13 +80,15 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 
 	h.logger.Info(fmt.Sprintf("using ca: `%s (%s)` for issuing certificates over EST", pkiCA.Name, pkiCA.ID()))
 
-	logger := logger.New(os.Stderr)
+	logger := logger.ZapWrappingLogger{
+		Logger: h.logger,
+	}
 
 	estCA := ca.New(pkiCA, h.logger)
 
 	estServerConfig := &est.ServerConfig{
 		CA:             estCA,
-		Logger:         logger,          //logger,
+		Logger:         logger,
 		AllowedHosts:   nil,             //cfg.AllowedHosts,
 		Timeout:        time.Second * 0, // time.Duration(cfg.Timeout) * time.Second,
 		RateLimit:      0,               //cfg.RateLimit,
@@ -121,10 +122,6 @@ func (h *Handler) processDefaults() {
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 
-	// TODO: implement wrapper for errors written by the Chi router?
-
-	fmt.Println(fmt.Sprintf("%#+v", r))
-
 	buffer := h.bufferPool.Get()
 	defer h.bufferPool.Put(buffer)
 
@@ -133,20 +130,18 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 		// For now, we'll always buffer it
 		return true
 	}
+
 	recorder := caddyhttp.NewResponseRecorder(w, buffer, shouldBuffer)
 
-	fmt.Println(recorder)
-
 	h.router.ServeHTTP(recorder, r)
-
-	fmt.Println(recorder)
-	fmt.Println(fmt.Sprintf("%#+v", recorder))
 
 	// TODO: handle the case that the response is empty (i.e. 404, 204, etc)?
 
 	if !recorder.Buffered() {
 		// NOTE: not specifically required at this time
 	}
+
+	// TODO: implement wrapping of errors written by the Chi router?
 
 	recorder.Header().Set("server", serverHeader)
 

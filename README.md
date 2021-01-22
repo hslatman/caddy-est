@@ -38,15 +38,15 @@ Below is an excerpt of the configuration for (just) the EST module:
 ...
     "handle": [
         {
-        "handler": "est",
-        "ca": "est-example",
-        "allowed_hosts": [
-            "estserver.local.example.com"
-        ],
-        "rate_limit": 0,
-        "enabled_basic_auth": false,
-        "basic_auth_username": "username",
-        "basic_auth_password": "password"
+            "handler": "est",
+            "ca": "est-example",
+            "allowed_hosts": [
+                "estserver.local.example.com"
+            ],
+            "rate_limit": 0,
+            "enabled_basic_auth": false,
+            "basic_auth_username": "username",
+            "basic_auth_password": "password"
         }
     ]
 ...
@@ -68,6 +68,6 @@ Something like a single use token retrieved in some out-of-band way and sent in 
 4f0fac33feb82749209342878df1608691ff991c)
 * Have a look at the [Extensions](https://tools.ietf.org/html/rfc8295) for EST?
 * Implement ServerKeyGen and TPMEnroll?
-* Work with actual TPM/HSM? Also see this [commit](https://github.com/globalsign/est/commit/
+* Work with actual TPM/HSM? Also see this [commit](https://github.com/globalsign/est/commit/).
 
 ...

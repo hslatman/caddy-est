@@ -45,9 +45,10 @@
             ],
             "logs": {},
             "tls_connection_policies": [{
-              "client_authentication": {
-                "mode": "request"
-              }
+              "trusted_ca_certs_pem_files": [
+                "/path/to/caddy/data/pki/authorities/est-example/root.crt"
+              ],
+              "mode": "verify_if_given"
             }]
           }
         }

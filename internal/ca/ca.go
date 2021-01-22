@@ -75,6 +75,9 @@ func (c *CA) CSRAttrs(ctx context.Context, aps string, r *http.Request) (est.CSR
 // It will perform several checks and validations
 func (c *CA) Enroll(ctx context.Context, csr *x509.CertificateRequest, aps string, r *http.Request) (*x509.Certificate, error) {
 
+	// TODO: check initial authentication?
+	// See https://tools.ietf.org/html/rfc7030#section-2.2
+
 	caRoot := c.pki.RootCertificate()
 	template, err := generateTemplate(caRoot, csr)
 	if err != nil {

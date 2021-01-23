@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
@@ -40,6 +41,7 @@ func init() {
 
 const (
 	serverHeader = "Caddy EST Server v0.1.0"
+	estURLPrefix = "/.well-known/est/"
 )
 
 // Handler is an EST server handler
@@ -176,14 +178,19 @@ func (h *Handler) createBasicAuthFunc() func(ctx context.Context, r *http.Reques
 	return basicAuthFunc
 }
 
+// ServeHTTP serves the EST routes and forwards non-EST requests
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+
+	if !strings.HasPrefix(r.URL.String(), estURLPrefix) {
+		// this request is likely not intended for the EST router; continue to next Caddy handler
+		return next.ServeHTTP(w, r)
+	}
 
 	buffer := h.bufferPool.Get()
 	defer h.bufferPool.Put(buffer)
 
 	shouldBuffer := func(status int, header http.Header) bool {
-		// TODO: add logic for performing buffering vs. not doing it
-		// For now, we'll always buffer it
+		// We'll always buffer for now
 		return true
 	}
 
@@ -195,12 +202,16 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 		// NOTE: not specifically required at this time, because we always buffer
 	}
 
-	// TODO: implement wrapping of errors written by the Chi router?
+	statusCode := recorder.Status()
+	if statusCode != 404 && statusCode != 0 { // URL was found in the EST router
+		recorder.Header().Set("server", serverHeader)
 
-	recorder.Header().Set("server", serverHeader)
+		// The body was not changed; write response the easy way and return
+		return recorder.WriteResponse()
+	}
 
-	// The body was not changed; write response the easy way
-	return recorder.WriteResponse()
+	// continue to the next Caddy handler
+	return next.ServeHTTP(w, r)
 }
 
 // Cleanup implements caddy.CleanerUpper and closes any idle databases.

@@ -46,7 +46,8 @@ Below is an excerpt of the configuration for (just) the EST module:
             "rate_limit": 0,
             "enable_basic_auth": false,
             "basic_auth_username": "username",
-            "basic_auth_password": "password"
+            "basic_auth_password": "password",
+            "sign_with_root": false
         }
     ]
 ...
@@ -58,6 +59,7 @@ A more complete configuration, including examples for the PKI, TLS and HTTP is a
 ## Out of Scope
 
 * Certificate-less TLS.
+* ...
 
 ## Things That Can Be Done
 
@@ -73,5 +75,6 @@ Something like a single use token retrieved in some out-of-band way and sent in 
 * Implement ServerKeyGen and TPMEnroll?
 * Work with actual TPM/HSM? Also see this [commit](https://github.com/globalsign/est/commit/4f0fac33feb82749209342878df1608691ff991c).
 * Refactor into using our own endpoints instead of going through the Chi router provided by `globalsign/est`.
+* ...
 
 ...

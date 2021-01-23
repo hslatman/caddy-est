@@ -44,6 +44,15 @@ const (
 	estURLPrefix = "/.well-known/est/"
 )
 
+const (
+	cacertsEndpoint      = "cacerts"
+	csrattrsEndpoint     = "csrattrs"
+	enrollEndpoint       = "simpleenroll"
+	reenrollEndpoint     = "simplereenroll"
+	serverkeygenEndpoint = "serverkeygen"
+	tpmenrollEndpoint    = "tpmenroll"
+)
+
 // Handler is an EST server handler
 type Handler struct {
 	// CA is the ID of the Caddy PKI CA to use for issuing
@@ -71,6 +80,15 @@ type Handler struct {
 	// signed with the CA root key or the intermediate. Default
 	// is false
 	SignWithRoot *bool `json:"sign_with_root,omitempty"`
+	// EnforceClientCertificateOnEnroll forces the client to provide
+	// a client certificate on (reenrolling). This option was added
+	// because some clients do no always send a client certificate
+	// for the cacerts and csrattr calls. You can thus use the
+	// `verify_if_given` mode to verify a certificate if it's available
+	// It's also possible to fully enforce client certificates on the
+	// Caddy server level using the `require_and_verify` mode. The
+	// setting defaults to true.
+	EnforceClientCertificateOnEnroll *bool `json:"enforce_client_certificate_on_enroll,omitempty"`
 
 	// TODO: improve the Basic Auth configuration?
 	// TODO: think about and implement alternative methods for authentication.
@@ -108,7 +126,7 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("no certificate authority configured with id: %s", h.CA)
 	}
 
-	h.logger.Info(fmt.Sprintf("using ca: `%s (%s)` for issuing certificates over EST", pkiCA.Name, pkiCA.ID()))
+	h.logger.Info(fmt.Sprintf("using ca: `%s (%s)` for issuing certificates over EST for host(s): %s", pkiCA.Name, pkiCA.ID(), strings.Join(h.AllowedHosts, ",")))
 
 	estLogger := logger.ZapWrappingLogger{
 		Logger: h.logger,
@@ -186,6 +204,14 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 		return next.ServeHTTP(w, r)
 	}
 
+	err := h.enforceClientCertificates(r)
+	if err != nil {
+		//w.Write([]byte(fmt.Sprintf("%d %s\n", http.StatusUnauthorized, err.Error())))
+		w.Header().Set("server", serverHeader)
+		w.WriteHeader(http.StatusUnauthorized)
+		return nil
+	}
+
 	buffer := h.bufferPool.Get()
 	defer h.bufferPool.Put(buffer)
 
@@ -212,6 +238,33 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhtt
 
 	// continue to the next Caddy handler
 	return next.ServeHTTP(w, r)
+}
+
+func (h *Handler) enforceClientCertificates(r *http.Request) error {
+
+	// TODO: it would actually be nicer if this logic was in the globalsign/est server
+	// or would play nicer with the Caddy configuration.
+
+	if h.EnforceClientCertificateOnEnroll != nil && !*h.EnforceClientCertificateOnEnroll {
+		return nil
+	}
+
+	// skip the cacerts and csrattr endpoints; no certificate required
+	// TODO: verify that this is conform the RFC
+	// TODO: and verify that this works as expected with a client that
+	// supports a cert to be sent in simpleenroll
+	path := r.URL.Path
+	if strings.HasPrefix(path, estURLPrefix+cacertsEndpoint) ||
+		strings.HasPrefix(path, estURLPrefix+csrattrsEndpoint) {
+		return nil
+	}
+
+	certs := r.TLS.PeerCertificates
+	if len(certs) == 0 {
+		return fmt.Errorf("no client certificate provided")
+	}
+
+	return nil
 }
 
 // Cleanup implements caddy.CleanerUpper and closes any idle databases.

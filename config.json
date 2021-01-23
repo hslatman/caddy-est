@@ -14,9 +14,9 @@
         "http_port": 9080,
         "https_port": 9443,
         "servers": {
-          "estserver": {
+          "provisioner": {
             "listen": [
-              "estserver.local.example.com:9443"
+              "provisioner.local.example.com:8443"
             ],
             "routes": [
               {
@@ -31,12 +31,12 @@
                 "handle": [
                   {
                     "handler": "est",
-                    "ca": "est-example",
+                    "ca": "provisioning-ca",
                     "allowed_hosts": [
-                      "estserver.local.example.com"
+                      "provisioner.local.example.com"
                     ],
                     "rate_limit": 0,
-                    "enable_basic_auth": false,
+                    "enable_basic_auth": true,
                     "basic_auth_username": "username",
                     "basic_auth_password": "password",
                     "sign_with_root": false
@@ -45,10 +45,58 @@
               }
             ],
             "logs": {},
+            "automatic_https": {
+              "disable_redirects": true
+            },
             "tls_connection_policies": [{
               "client_authentication": {
                 "trusted_ca_certs_pem_files": [
-                  "/path/to/caddy/data/pki/authorities/est-example/root.crt"
+                  "/path/to/caddy/data/pki/authorities/provisioning-ca/root.crt"
+                ],
+                "mode": "verify_if_given"
+              }
+            }]
+          },
+          "enroller": {
+            "listen": [
+              "enroller.local.example.com:9443"
+            ],
+            "routes": [
+              {
+                "group": "est",
+                "match": [
+                  {
+                    "path": [
+                      "/.well-known/est/*"
+                    ]
+                  }
+                ],
+                "handle": [
+                  {
+                    "handler": "est",
+                    "ca": "enrollment-ca",
+                    "allowed_hosts": [
+                      "enroller.local.example.com"
+                    ],
+                    "rate_limit": 0,
+                    "enable_basic_auth": false,
+                    "basic_auth_username": "username",
+                    "basic_auth_password": "password",
+                    "sign_with_root": false,
+                    "enforce_client_certificate_on_enroll": false
+                  }
+                ]
+              }
+            ],
+            "logs": {},
+            "automatic_https": {
+              "disable_redirects": true
+            },
+            "tls_connection_policies": [{
+              "client_authentication": {
+                "trusted_ca_certs_pem_files": [
+                  "/path/to/caddy/data/pki/authorities/provisioning-ca/root.crt",
+                  "/path/to/caddy/data/pki/authorities/enrollment-ca/root.crt"
                 ],
                 "mode": "verify_if_given"
               }
@@ -68,10 +116,18 @@
               "on_demand": true
             },
             {
-              "subjects": ["estserver.local.example.com"],
+              "subjects": ["enroller.local.example.com"],
               "issuers": [{
                 "module": "internal",
-                "ca": "est-example"
+                "ca": "enrollment-ca"
+              }],
+              "on_demand": true
+            },
+            {
+              "subjects": ["provisioner.local.example.com"],
+              "issuers": [{
+                "module": "internal",
+                "ca": "provisioning-ca"
               }],
               "on_demand": true
             }
@@ -81,10 +137,16 @@
       "pki": {
         "certificate_authorities": {
           "local": {},
-          "est-example": {
-            "name": "EST Example",
-            "root_common_name": "EST Root Example",
-            "intermediate_common_name": "EST Intermediate Example",
+          "provisioning-ca": {
+            "name": "Provisioning CA Example",
+            "root_common_name": "Provisioning CA Root Example",
+            "intermediate_common_name": "Provisioning CA Intermediate Example",
+            "install_trust": false
+          },
+          "enrollment-ca": {
+            "name": "Enrollment CA Example",
+            "root_common_name": "Enrollment CA Root Example",
+            "intermediate_common_name": "Enrollment CA Intermediate Example",
             "install_trust": false
           }
         }

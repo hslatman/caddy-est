@@ -84,8 +84,6 @@ func (c *CA) Enroll(ctx context.Context, csr *x509.CertificateRequest, aps strin
 	// TODO: check initial authentication? It does not seem (fully) handled by globalsign/est
 	// See https://tools.ietf.org/html/rfc7030#section-2.2
 
-	fmt.Println(c.signWithRoot)
-
 	var signingCert *x509.Certificate
 	if c.signWithRoot {
 		signingCert = c.pki.RootCertificate()

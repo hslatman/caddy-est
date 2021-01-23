@@ -39,8 +39,9 @@ var (
 // CA is responsible for signing certificates requested by clients
 // using Enrollment over Secure Transport.
 type CA struct {
-	pki    *caddypki.CA
-	logger *zap.Logger
+	pki          *caddypki.CA
+	logger       *zap.Logger
+	signWithRoot bool
 }
 
 // New creates a new CA for issuing certificates over EST
@@ -52,14 +53,19 @@ func New(pkiCA *caddypki.CA, logger *zap.Logger) *CA {
 	}
 }
 
+// EnableSigningWithRoot enables signin with the CA root
+// key instead of the intermedate key.
+func (c *CA) EnableSigningWithRoot() {
+	c.signWithRoot = true
+}
+
 // CACerts returns the CA root certificate(s) according to RFC7030 4.1.
 func (c *CA) CACerts(ctx context.Context, aps string, r *http.Request) ([]*x509.Certificate, error) {
 
 	rootCert := c.pki.RootCertificate()
+	intermediateCert := c.pki.IntermediateCertificate()
 
-	// TODO: should we also return intermediate certificates?
-
-	return []*x509.Certificate{rootCert}, nil
+	return []*x509.Certificate{rootCert, intermediateCert}, nil
 }
 
 // CSRAttrs returns CSR attributes requested by this CA
@@ -75,22 +81,35 @@ func (c *CA) CSRAttrs(ctx context.Context, aps string, r *http.Request) (est.CSR
 // It will perform several checks and validations
 func (c *CA) Enroll(ctx context.Context, csr *x509.CertificateRequest, aps string, r *http.Request) (*x509.Certificate, error) {
 
-	// TODO: check initial authentication?
+	// TODO: check initial authentication? It does not seem (fully) handled by globalsign/est
 	// See https://tools.ietf.org/html/rfc7030#section-2.2
 
-	caRoot := c.pki.RootCertificate()
-	template, err := generateTemplate(caRoot, csr)
+	fmt.Println(c.signWithRoot)
+
+	var signingCert *x509.Certificate
+	if c.signWithRoot {
+		signingCert = c.pki.RootCertificate()
+	} else {
+		signingCert = c.pki.IntermediateCertificate()
+	}
+
+	template, err := generateTemplate(signingCert, csr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create template: %w", err)
 	}
 
-	key, err := c.pki.RootKey()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get private key: %w", err)
+	var signingKey interface{}
+	if c.signWithRoot {
+		signingKey, err = c.pki.RootKey()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get root private key: %w", err)
+		}
+	} else {
+		signingKey = c.pki.IntermediateKey()
 	}
 
 	// Create and return a new certificate based on the certificate template
-	der, err := x509.CreateCertificate(rand.Reader, template, caRoot, csr.PublicKey, key)
+	der, err := x509.CreateCertificate(rand.Reader, template, signingCert, csr.PublicKey, signingKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create certificate: %w", err)
 	}

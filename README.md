@@ -55,6 +55,10 @@ Below is an excerpt of the configuration for (just) the EST module:
 The EST handler expects a Caddy PKI instance to be available called `est-example`, which you'll have to configure manually.
 A more complete configuration, including examples for the PKI, TLS and HTTP is available in `config.json`.
 
+## Out of Scope
+
+* Certificate-less TLS.
+
 ## Things That Can Be Done
 
 * Add tests.

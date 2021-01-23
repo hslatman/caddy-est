@@ -38,7 +38,8 @@
                     "rate_limit": 0,
                     "enable_basic_auth": false,
                     "basic_auth_username": "username",
-                    "basic_auth_password": "password"
+                    "basic_auth_password": "password",
+                    "sign_with_root": false
                   }
                 ]
               }

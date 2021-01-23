@@ -65,6 +65,10 @@ type Handler struct {
 	// BasicAuthPassword is the password to use for HTTP Basic
 	// authentication
 	BasicAuthPassword string `json:"basic_auth_password,omitempty"`
+	// SignWithRoot indicates whether EST certificate should be
+	// signed with the CA root key or the intermediate. Default
+	// is false
+	SignWithRoot *bool `json:"sign_with_root,omitempty"`
 
 	// TODO: improve the Basic Auth configuration?
 	// TODO: think about and implement alternative methods for authentication.
@@ -110,6 +114,10 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 
 	estCA := ca.New(pkiCA, h.logger)
 
+	if h.shouldSignWithRoot() {
+		estCA.EnableSigningWithRoot()
+	}
+
 	basicAuthFunc := h.createBasicAuthFunc()
 
 	estServerConfig := &est.ServerConfig{
@@ -144,6 +152,10 @@ func (h *Handler) processDefaults() {
 		h.AllowedHosts = []string{"localhost"}
 	}
 
+}
+
+func (h *Handler) shouldSignWithRoot() bool {
+	return h.SignWithRoot != nil && *h.SignWithRoot
 }
 
 func (h *Handler) createBasicAuthFunc() func(ctx context.Context, r *http.Request, aps, username, password string) error {

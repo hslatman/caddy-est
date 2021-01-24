@@ -14,7 +14,7 @@ We provide Caddy with the configuration for the `pki` app, which results in Cadd
 It is thus advisable to create a `ca` configuration for the `pki` app that is used specifically for the EST module.
 An example configuration is available in `config.json`.
 
-__Please note that the module currently does not provide much in terms of initial authentication except for a rudimentary HTTP Basic Authentication implementation__
+__Please note that the module currently does not provide much in terms of initial authentication except for a rudimentary HTTP Basic Authentication implementation. Mutual TLS can be used, but requires an EST client implementation that supports it.__
 
 ## Usage
 
@@ -78,6 +78,8 @@ We can try the `thales-e-security/estclient` instead to see if that one works wi
 This needs something like a list of users (IDs) + passwords, a more generic approach to authentication (i.e. Caddy auth, but that's not in the RFC) or the shared secret approach (although a single shared secret is also not nice ...). 
 Something like a single use token retrieved in some out-of-band way and sent in a HTTP header is probably what we want, although that wouldn't be entirely according to the RFC.
 * ~~Test HTTP Basic Authentication with an EST client that supports it.~~ The `globalsign/est` client seems to work just fine.
+* Test Mutual TLS for enrollment. Currently this is only partially supported, because the `globalsign/est` server does not seem to handle this fully itself, but it can be implemented at the server level. Requires EST clients that support Mutual TLS though.
+* Add (automated) tests and examples with EST client libraries.
 * Have a look at the [Extensions](https://tools.ietf.org/html/rfc8295) for EST?
 * Implement ServerKeyGen and TPMEnroll?
 * Work with actual TPM/HSM? Also see this [commit](https://github.com/globalsign/est/commit/4f0fac33feb82749209342878df1608691ff991c).
